@@ -328,6 +328,8 @@ listen_socket(char *port)
     hints.ai_flags		= AI_PASSIVE;
 
 	/*
+	 * 名前解決
+	 *
 	 * int getaddrinfo(
 	 * 		const char *node,
 	 * 		const char *service,
