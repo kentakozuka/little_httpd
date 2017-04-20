@@ -1,6 +1,5 @@
 /*
     httpd.c
-    
 */
 
 #include <stdio.h>
@@ -133,11 +132,13 @@ main(int argc, char *argv[])
     char *port = NULL;
 	//ドキュメントルート
     char *docroot;
+	//chrootフラグ
     int do_chroot = 0;
 	//ユーザ
     char *user = NULL;
 	//グループ
     char *group = NULL;
+	//オプション
     int opt;
 
 	//プログラムの環境変数の設定
@@ -380,27 +381,41 @@ listen_socket(char *port)
         log_exit(gai_strerror(err));
 	//アドレス情報が複数帰ってきた場合のため、ループさせる
 	//（ただし、このプログラムではIPv4を指定しているためループはしない）
+	//戻り値のリンクリストを回す
     for (ai = res; ai; ai = ai->ai_next) {
         int sock;
 
+		//ソケットを作成しファイルディスクリプタを返す
         sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+		//作成失敗ならスキップ
         if (sock < 0) continue;
+		//接続を待つアドレスをソケットに割り当てる
+		//成功? 0 : -1
         if (bind(sock, ai->ai_addr, ai->ai_addrlen) < 0) {
             close(sock);
             continue;
         }
+		//ソケットが待受用であることをカーネルに知らせる
         if (listen(sock, MAX_BACKLOG) < 0) {
             close(sock);
             continue;
         }
+		//addrfinfoはmallocで割り当てられているため使用後に開放する
         freeaddrinfo(res);
+		//ソケットを返す
+		//このプログラムでは１つでも成功したら即正常終了する
         return sock;
     }
+	//失敗した場合
     log_exit("failed to listen socket");
-	/* NOT REACH */
     return -1;  
 }
 
+/*
+ * サーバのメイン処理
+ * ソケットを待ち受けにして接続があった場合はプロセスをフォークする
+ * その後の処理はservice()で行う
+ */
 static void
 server_main(int server, char *docroot)
 {
@@ -410,31 +425,66 @@ server_main(int server, char *docroot)
         int sock;
         int pid;
 
+		/*ソケットにクライアントが接続してくるのを待つ
+		 * 接続が完了したら接続済ストリームのファイルディスクリプタを返す
+		 * 
+		 * 引数
+		 * 	socket		ソケット記述子
+		 * 	address		呼び出し側のクライアントのアドレスポインタ
+		 * 	address_len	アドレス構造体の長さ
+		 * 
+		 * 戻り値
+		 * 	新しいソケットファイルディスクリプタ 	成功(保留中のクライアント接続がある場合)
+		 * 	-1 	失敗
+		 * 
+		 * 戻り値が失敗(-1)の場合のerrnoの値：
+		 * EWOULDBLOCK 	O_NUNBLOCKが指定されていて保留中の接続が無い場合に発生する。
+		 */
         sock = accept(server, (struct sockaddr*)&addr, &addrlen);
+		//エラーの場合
         if (sock < 0) log_exit("accept(2) failed: %s", strerror(errno));
+		//成功の場合
+		//子プロセスを作成
         pid = fork();
+		//失敗の場合
         if (pid < 0) exit(3);
-        if (pid == 0) {   /* child */
+		/* 子プロセス */
+        if (pid == 0) {
             FILE *inf = fdopen(sock, "r");
             FILE *outf = fdopen(sock, "w");
 
+			//serviceにhttpの処理を投げる
             service(inf, outf, docroot);
+			//たぶんこれいらない
             exit(0);
-        }
-        close(sock);
+		/* 親プロセス */
+        } else {
+			//ソケットをクローズ
+        	close(sock);
+		}
     }
 }
 
+/*
+ * httpの処理メソッド
+ * httpのリクエストを処理してレスポンスを返すメソッド
+ */
 static void
 service(FILE *in, FILE *out, char *docroot)
 {
     struct HTTPRequest *req;
 
+	//リクエストを処理
     req = read_request(in);
+	//レスポンスを処理
     respond_to(req, out, docroot);
+	//リクエストを開放
     free_request(req);
 }
-
+/*
+ * リクエスト処理メソッド
+ * ストリームからリクエストを読んでstruct httprequestを作成する
+ */
 static struct HTTPRequest*
 read_request(FILE *in)
 {
@@ -461,6 +511,9 @@ read_request(FILE *in)
     return req;
 }
 
+/*
+ * リクエストライン解析メソッド
+ */
 static void
 read_request_line(struct HTTPRequest *req, FILE *in)
 {
@@ -489,6 +542,9 @@ read_request_line(struct HTTPRequest *req, FILE *in)
     req->protocol_minor_version = atoi(p);
 }
 
+/*
+ * ヘッダー読み込みメソッド
+ */
 static struct HTTPHeaderField*
 read_header_field(FILE *in)
 {
@@ -525,6 +581,9 @@ upcase(char *str)
     }
 }
 
+/*
+ * リクエスト構造体開放メソッド
+ */
 static void
 free_request(struct HTTPRequest *req)
 {
@@ -544,6 +603,9 @@ free_request(struct HTTPRequest *req)
     free(req);
 }
 
+/*
+ * struct HTTPRequestからリクエスのエンティティボディの長さを得る
+ */
 static long
 content_length(struct HTTPRequest *req)
 {

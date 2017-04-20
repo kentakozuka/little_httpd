@@ -1,0 +1,64 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+BLOCK_BUF_SIZE	httpd.c	32;"	d	file:
+DEFAULT_PORT	httpd.c	36;"	d	file:
+FileInfo	httpd.c	/^struct FileInfo {$/;"	s	file:
+HTTPHeaderField	httpd.c	/^struct HTTPHeaderField {$/;"	s	file:
+HTTPRequest	httpd.c	/^struct HTTPRequest {$/;"	s	file:
+HTTP_MINOR_VERSION	httpd.c	31;"	d	file:
+LINE_BUF_SIZE	httpd.c	33;"	d	file:
+MAX_BACKLOG	httpd.c	35;"	d	file:
+MAX_REQUEST_BODY_LENGTH	httpd.c	34;"	d	file:
+SERVER_NAME	httpd.c	29;"	d	file:
+SERVER_VERSION	httpd.c	30;"	d	file:
+TIME_BUF_SIZE	httpd.c	682;"	d	file:
+USAGE	httpd.c	95;"	d	file:
+_GNU_SOURCE	httpd.c	24;"	d	file:
+become_daemon	httpd.c	/^become_daemon(void)$/;"	f	file:
+body	httpd.c	/^    char *body;$/;"	m	struct:HTTPRequest	file:
+build_fspath	httpd.c	/^build_fspath(char *docroot, char *urlpath)$/;"	f	file:
+content_length	httpd.c	/^content_length(struct HTTPRequest *req)$/;"	f	file:
+debug_mode	httpd.c	/^static int debug_mode = 0;$/;"	v	file:
+do_file_response	httpd.c	/^do_file_response(struct HTTPRequest *req, FILE *out, char *docroot)$/;"	f	file:
+free_fileinfo	httpd.c	/^free_fileinfo(struct FileInfo *info)$/;"	f	file:
+free_request	httpd.c	/^free_request(struct HTTPRequest *req)$/;"	f	file:
+get_fileinfo	httpd.c	/^get_fileinfo(char *docroot, char *urlpath)$/;"	f	file:
+guess_content_type	httpd.c	/^guess_content_type(struct FileInfo *info)$/;"	f	file:
+header	httpd.c	/^    struct HTTPHeaderField *header;$/;"	m	struct:HTTPRequest	typeref:struct:HTTPRequest::HTTPHeaderField	file:
+install_signal_handlers	httpd.c	/^install_signal_handlers(void)$/;"	f	file:
+length	httpd.c	/^    long length;$/;"	m	struct:HTTPRequest	file:
+listen_socket	httpd.c	/^listen_socket(char *port)$/;"	f	file:
+log_exit	httpd.c	/^log_exit(const char *fmt, ...)$/;"	f	file:
+longopts	httpd.c	/^static struct option longopts[] = {$/;"	v	typeref:struct:option	file:
+lookup_header_field_value	httpd.c	/^lookup_header_field_value(struct HTTPRequest *req, char *name)$/;"	f	file:
+main	httpd.c	/^main(int argc, char *argv[])$/;"	f
+method	httpd.c	/^    char *method;$/;"	m	struct:HTTPRequest	file:
+method_not_allowed	httpd.c	/^method_not_allowed(struct HTTPRequest *req, FILE *out)$/;"	f	file:
+name	httpd.c	/^    char *name;$/;"	m	struct:HTTPHeaderField	file:
+next	httpd.c	/^    struct HTTPHeaderField *next;$/;"	m	struct:HTTPHeaderField	typeref:struct:HTTPHeaderField::HTTPHeaderField	file:
+not_found	httpd.c	/^not_found(struct HTTPRequest *req, FILE *out)$/;"	f	file:
+not_implemented	httpd.c	/^not_implemented(struct HTTPRequest *req, FILE *out)$/;"	f	file:
+ok	httpd.c	/^    int ok;$/;"	m	struct:FileInfo	file:
+output_common_header_fields	httpd.c	/^output_common_header_fields(struct HTTPRequest *req, FILE *out, char *status)$/;"	f	file:
+path	httpd.c	/^    char *path;$/;"	m	struct:FileInfo	file:
+path	httpd.c	/^    char *path;$/;"	m	struct:HTTPRequest	file:
+protocol_minor_version	httpd.c	/^    int protocol_minor_version;$/;"	m	struct:HTTPRequest	file:
+read_header_field	httpd.c	/^read_header_field(FILE *in)$/;"	f	file:
+read_request	httpd.c	/^read_request(FILE *in)$/;"	f	file:
+read_request_line	httpd.c	/^read_request_line(struct HTTPRequest *req, FILE *in)$/;"	f	file:
+respond_to	httpd.c	/^respond_to(struct HTTPRequest *req, FILE *out, char *docroot)$/;"	f	file:
+server_main	httpd.c	/^server_main(int server, char *docroot)$/;"	f	file:
+service	httpd.c	/^service(FILE *in, FILE *out, char *docroot)$/;"	f	file:
+setup_environment	httpd.c	/^setup_environment(char *root, char *user, char *group)$/;"	f	file:
+sighandler_t	httpd.c	/^typedef void (*sighandler_t)(int);$/;"	t	file:
+signal_exit	httpd.c	/^signal_exit(int sig)$/;"	f	file:
+size	httpd.c	/^    long size;$/;"	m	struct:FileInfo	file:
+trap_signal	httpd.c	/^trap_signal(int sig, sighandler_t handler)$/;"	f	file:
+upcase	httpd.c	/^upcase(char *str)$/;"	f	file:
+value	httpd.c	/^    char *value;$/;"	m	struct:HTTPHeaderField	file:
+wait_child	httpd.c	/^wait_child(int sig)$/;"	f	file:
+xmalloc	httpd.c	/^xmalloc(size_t sz)$/;"	f	file:
