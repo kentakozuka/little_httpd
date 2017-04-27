@@ -17,6 +17,10 @@
 #include <time.h>
 #include <stdarg.h>
 #include <ctype.h>
+
+/***********************************
+ * ライブラリ
+ ***********************************/
 #include <signal.h>
 #include <pwd.h>
 #include <grp.h>
@@ -35,30 +39,34 @@
 #define MAX_REQUEST_BODY_LENGTH (1024 * 1024)
 #define MAX_BACKLOG 5
 #define DEFAULT_PORT "80"
+//引数エラーメッセージ
+#define USAGE "Usage: %s [--port=n] [--chroot --user=u --group=g] [--debug] <docroot>\n"
 
 
 /***********************************
  * 構造体
  ***********************************/
+//httpヘッダ
 struct HTTPHeaderField {
-    char *name;
-    char *value;
-    struct HTTPHeaderField *next;
+	char *name;
+	char *value;
+	struct HTTPHeaderField *next;
 };
 
+//httpリクエスト
 struct HTTPRequest {
-    int protocol_minor_version;
-    char *method;
-    char *path;
-    struct HTTPHeaderField *header;
-    char *body;
-    long length;
+	int protocol_minor_version;
+	char *method;
+	char *path;
+	struct HTTPHeaderField *header;
+	char *body;
+	long length;
 };
-
+//ファイル情報
 struct FileInfo {
-    char *path;
-    long size;
-    int ok;
+	char *path;
+	long size;
+	int ok;
 };
 
 /***********************************
@@ -95,8 +103,7 @@ static void* xmalloc(size_t sz);
 static void log_exit(const char *fmt, ...);
 
 
-#define USAGE "Usage: %s [--port=n] [--chroot --user=u --group=g] [--debug] <docroot>\n"
-
+//デバッグフラグ
 static int debug_mode = 0;
 
 /*
