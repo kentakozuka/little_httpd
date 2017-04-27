@@ -31,13 +31,17 @@
 /***********************************
  * 定数
  ***********************************/
+//サーバ名
 #define SERVER_NAME "LittleHTTP"
+//サーババージョン
 #define SERVER_VERSION "1.0"
 #define HTTP_MINOR_VERSION 0
 #define BLOCK_BUF_SIZE 1024
 #define LINE_BUF_SIZE 4096
+//リクエストボディの最大長
 #define MAX_REQUEST_BODY_LENGTH (1024 * 1024)
 #define MAX_BACKLOG 5
+//デフォルトポート
 #define DEFAULT_PORT "80"
 //引数エラーメッセージ
 #define USAGE "Usage: %s [--port=n] [--chroot --user=u --group=g] [--debug] <docroot>\n"
@@ -209,55 +213,86 @@ main(int argc, char *argv[])
 	exit(0);
 }
 
+/*
+ * chroot()すると同時にクレデンシャルをuserとgroupに変更する関数
+ *
+ * スーパユーザで/etcが必要な関数呼び出し
+ * スーパユーザでchroot()を実行
+ * 別のクレデンシャルに変更
+ *
+ * @param *root
+ * @param *user
+ * @param *group
+ */
 static void
 setup_environment(char *root, char *user, char *group)
 {
 	struct passwd *pw;
 	struct group *gr;
 	
+	//nullチェック
 	if (!user || !group) {
 		fprintf(stderr, "use both of --user and --group\n");
 		exit(1);
 	}
+	//グループ情報をグループ名から検索する
 	gr = getgrnam(group);
 	if (!gr) {
 		fprintf(stderr, "no such group: %s\n", group);
 		exit(1);
 	}
+	//自分の実グループIDと実行グループIDを変更する
 	if (setgid(gr->gr_gid) < 0) {
 		perror("setgid(2)");
 		exit(1);
 	}
+	// /etc/groupなどのデータベースを見て、
+	// ユーザの補足グループを自プロセスに設定する（グループも同様）
 	if (initgroups(user, gr->gr_gid) < 0) {
 		perror("initgroups(2)");
 		exit(1);
 	}
+	//ユーザ情報をユーザ名から検索する
 	pw = getpwnam(user);
 	if (!pw) {
 		fprintf(stderr, "no such user: %s\n", user);
 		exit(1);
 	}
+	//chroot()する:自分のルートディレクトリをrootに設定する
 	chroot(root);
+	//自分の実ユーザIDと実行ユーザIDを変更する
 	if (setuid(pw->pw_uid) < 0) {
-	perror("setuid(2)");
-	exit(1);
-}
+		perror("setuid(2)");
+		exit(1);
+	}
 }
 
+/*
+ * 各シグナルのハンドラを設定するメソッド
+ */
 static void
 become_daemon(void)
 {
-int n;
+	int n;
 
+	//ルートディレクトリに移動
 	if (chdir("/") < 0) {
 		log_exit("chdir(2) failed: %s", strerror(errno));
 	}
+	//標準入出力を/dev/nullにつなぐ
 	freopen("/dev/null", "r", stdin);
 	freopen("/dev/null", "w", stdout);
 	freopen("/dev/null", "w", stderr);
+	//フォークし、端末に従属している親のプロセスを終了する
 	n = fork();
 	if (n < 0) log_exit("fork(2) failed: %s", strerror(errno));
 	if (n != 0) _exit(0);
+	/*
+	 * setsid()
+	 * 新しいセッションを作成し、自分がセッションリーダになる
+	 * 同時に、そのセッションで最初のプロセスグループを作成し、そのグループリーダになる
+	 * @return 成功：セッションID、失敗：-1
+	 */
 	if (setsid() < 0) log_exit("setsid(2) failed: %s", strerror(errno));
 }
 
@@ -686,29 +721,42 @@ respond_to(struct HTTPRequest *req, FILE *out, char *docroot)
 		not_implemented(req, out);
 }
 
+/*
+ * getリクエストを出力する
+ * @param *req		httpリクエスト情報
+ * @param *out		リクエストhttp文出力先
+ * @param *docroot	ドキュメントルート
+ */
 static void
 do_file_response(struct HTTPRequest *req, FILE *out, char *docroot)
 {
 	struct FileInfo *info;
 
+	//ファイル情報を取得して構造体に格納
 	info = get_fileinfo(docroot, req->path);
 	if (!info->ok) {
 		free_fileinfo(info);
 		not_found(req, out);
 		return;
 	}
+	//共通ヘッダ部分を書き出し
 	output_common_header_fields(req, out, "200 OK");
 	fprintf(out, "Content-Length: %ld\r\n", info->size);
 	fprintf(out, "Content-Type: %s\r\n", guess_content_type(info));
 	fprintf(out, "\r\n");
+	/*
+	 * ボディを作成
+	 */
 	if (strcmp(req->method, "HEAD") != 0) {
 		int fd;
 		char buf[BLOCK_BUF_SIZE];
 		ssize_t n;
 
+		//リクエスト対象のファイルを開く
 		fd = open(info->path, O_RDONLY);
 		if (fd < 0)
 		log_exit("failed to open %s: %s", info->path, strerror(errno));
+		//1行ずつ読み込んで書き出す
 		for (;;) {
 			n = read(fd, buf, BLOCK_BUF_SIZE);
 			if (n < 0)
@@ -718,12 +766,19 @@ do_file_response(struct HTTPRequest *req, FILE *out, char *docroot)
 			if (fwrite(buf, 1, n, out) < n)
 			log_exit("failed to write to socket");
 		}
+		//終わったら閉じる
 		close(fd);
 	}
+	//解放
 	fflush(out);
 	free_fileinfo(info);
 }
 
+/*
+ * 405エラーを返す場合のヘッダ部分の書き出し関数
+ * @param *req		httpリクエスト情報
+ * @param *out		リクエストhttp文出力先
+ */
 static void
 method_not_allowed(struct HTTPRequest *req, FILE *out)
 {
@@ -741,6 +796,11 @@ method_not_allowed(struct HTTPRequest *req, FILE *out)
 	fflush(out);
 }
 
+/*
+ * 501エラーを返す場合のヘッダ部分の書き出し関数
+ * @param *req		httpリクエスト情報
+ * @param *out		リクエストhttp文出力先
+ */
 static void
 not_implemented(struct HTTPRequest *req, FILE *out)
 {
@@ -758,6 +818,11 @@ not_implemented(struct HTTPRequest *req, FILE *out)
 	fflush(out);
 }
 
+/*
+ * 404エラーを返す場合のヘッダ部分の書き出し関数
+ * @param *req		httpリクエスト情報
+ * @param *out		リクエストhttp文出力先
+ */
 static void
 not_found(struct HTTPRequest *req, FILE *out)
 {
@@ -775,6 +840,11 @@ not_found(struct HTTPRequest *req, FILE *out)
 
 #define TIME_BUF_SIZE 64
 
+/*
+ * 正常時の場合のヘッダ部分の書き出し関数
+ * @param *req		httpリクエスト情報
+ * @param *out		リクエストhttp文出力先
+ */
 static void
 output_common_header_fields(struct HTTPRequest *req, FILE *out, char *status)
 {
@@ -793,7 +863,11 @@ output_common_header_fields(struct HTTPRequest *req, FILE *out, char *status)
 }
 
 /*
- * struct FileInfo作成メソッド
+ * リクエストで指定されたファイルの情報を取得する関数
+ * struct FileInfo作成する
+ * @param 	*docroot		ドキュメントルート
+ * @param 	*urlpath		ドキュメントルートからの相対パス
+ * @return	*FileInfo		ファイル情報の構造体
  */
 static struct FileInfo*
 get_fileinfo(char *docroot, char *urlpath)
